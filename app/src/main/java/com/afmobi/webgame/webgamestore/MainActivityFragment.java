@@ -1,6 +1,10 @@
 package com.afmobi.webgame.webgamestore;
 
 import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
@@ -17,13 +21,20 @@ import android.webkit.WebView;
  */
 public class MainActivityFragment extends Fragment {
     private final static String TAG = "MainActivityFragment";
+
+//    java.lang.IllegalArgumentException: Can only use lower 16 bits for requestCode
+// 	at android.support.v4.app.BaseFragmentActivityGingerbread.checkForValidRequestCode(BaseFragmentActivityGingerbread.java:91)
+
+    private final static int REQUEST_PERMISSION_SUCCESS = 1;
     private WebView mGameWebView;
+
     public MainActivityFragment() {
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
+        requestExternalStoragePermissions();
         View contentView = inflater.inflate(R.layout.fragment_main, container, false);
         mGameWebView = (WebView) contentView.findViewById(R.id.main_webview);
         mGameWebView.requestFocus();
@@ -61,16 +72,42 @@ public class MainActivityFragment extends Fragment {
         gameWebSettings.setSavePassword(false);
         gameWebSettings.setSaveFormData(false);
         gameWebSettings.setSupportZoom(false);
+
         return contentView;
     }
 
+    private boolean canAccessExternalStorage() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return getContext().checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
+                    getContext().checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+        } else {
+            return true;
+        }
+    }
+
+    private void requestExternalStoragePermissions(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+
+            if (!canAccessExternalStorage())
+                requestPermissions(new String[]{
+                                Manifest.permission.READ_EXTERNAL_STORAGE,
+                                Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        REQUEST_PERMISSION_SUCCESS);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        mGameWebView.loadUrl("file:///mnt/sdcard/99BallsEvo/index.html");
+    }
 
     @Override
     public void onStart() {
         super.onStart();
-        requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                1);
+
+        if (!canAccessExternalStorage())
+            return;
 
         // 加载assets目录下的html页面
 //         mGameWebView.loadUrl("file:///android_asset/99BallsEvo/index.html");
